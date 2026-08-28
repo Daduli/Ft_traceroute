@@ -12,7 +12,7 @@
 #include <netdb.h>
 #include <netinet/ip_icmp.h>
 #include <errno.h>
-
+#include <sys/time.h>
 #include <string.h>
 
 /*================================*/
@@ -57,6 +57,7 @@ void ft_receiving_socket(t_receive_packet *receive_packet);
 /*================================*/
 
 void ft_send_packet(t_send_packet *send_packet, int ttl);
+void ft_receive_packet(t_receive_packet *receive_packet);
 
 /*================================*/
 /*=========    HELPERS    ========*/

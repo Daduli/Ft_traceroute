@@ -22,5 +22,9 @@ int main(int ac, char **av)
     struct sockaddr_in *addr = (struct sockaddr_in *)&send_packet.address;
     inet_ntop(AF_INET, &(addr->sin_addr), host_ip, INET_ADDRSTRLEN);
 
-    ft_send_packet(&send_packet, 1);
+    for (int ttl = 1; ttl <= MAX_TTL; ttl++)
+    {
+        ft_send_packet(&send_packet, ttl);
+        ft_receive_packet(&receive_packet);
+    }
 }
