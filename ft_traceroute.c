@@ -19,6 +19,8 @@ int main(int ac, char **av)
     ft_receiving_socket(&receive_packet);
 
     // Save the IP address of the host
-    struct sockaddr_in *addr = (struct sockaddr_in *)send_packet.address_infos->ai_addr;
+    struct sockaddr_in *addr = (struct sockaddr_in *)&send_packet.address;
     inet_ntop(AF_INET, &(addr->sin_addr), host_ip, INET_ADDRSTRLEN);
+
+    ft_send_packet(&send_packet, 1);
 }
