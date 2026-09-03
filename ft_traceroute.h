@@ -20,6 +20,7 @@
 /*================================*/
 
 #define MAX_TTL 30
+#define NB_PROBES 3
 
 typedef struct s_host
 {
