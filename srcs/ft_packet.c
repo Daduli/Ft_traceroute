@@ -34,11 +34,12 @@ void ft_receive_packet(t_receive_packet *receive_packet)
 {
     char buffer[1024];
     struct timeval timeout;
-    timeout.tv_sec = 5; // Set timeout to 5 seconds
+    timeout.tv_sec = 5;  // Set timeout to 5 seconds
+    timeout.tv_usec = 0; // It is mandatory to set usec
 
     if (setsockopt(receive_packet->sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) == -1)
     {
-        printf("ft_traceroute: receive setsockopt failed\n");
+        printf("ft_traceroute: receive setsockopt failed, %s\n", strerror(errno));
         close(receive_packet->sockfd);
         exit(1);
     }
@@ -57,6 +58,17 @@ void ft_receive_packet(t_receive_packet *receive_packet)
         }
     }
 
+    // Get the sender's IP address
+    char sender_ip[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &((struct sockaddr_in *)receive_packet->address_infos->ai_addr)->sin_addr, sender_ip, sizeof(sender_ip));
+    printf("Sender IP: %s\n", sender_ip);
+
+    // Get the sender's hostname
+    char sender_hostname[256];
+    getnameinfo(receive_packet->address_infos->ai_addr, receive_packet->address_infos->ai_addrlen, sender_hostname, 256, NULL, 0, 0);
+    printf("Hostname : %s\n", sender_hostname);
+
+    // Set up the ICMP header and IP header pointers to detect the ICMP response type
     struct iphdr *ip_header = (struct iphdr *)buffer;
     struct icmphdr *icmp_header = (struct icmphdr *)(buffer + ip_header->ihl * 4);
 

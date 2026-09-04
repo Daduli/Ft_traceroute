@@ -14,6 +14,7 @@
 #include <errno.h>
 #include <sys/time.h>
 #include <string.h>
+#include <sys/socket.h>
 
 /*================================*/
 /*=====    DATA STRUCTURE    =====*/
