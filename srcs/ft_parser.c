@@ -19,7 +19,7 @@ char get_argument_type(char *argument)
 }
 
 /*
- * Parses the command line arguments
+ * Parses the command line arguments and saves the hostname in the provided pointer.
  */
 void ft_parser(int ac, char **av, char **hostname)
 {
@@ -40,11 +40,7 @@ void ft_parser(int ac, char **av, char **hostname)
     }
 
     if (host_count < 1)
-    {
-        printf("ft_traceroute: missing host operand\n"
-               "Try 'ft_traceroute --help' for more information.\n");
-        exit(1);
-    }
+        print_help();
     else if (host_count > 1)
     {
         printf("ft_traceroute: too many host operands\n");
