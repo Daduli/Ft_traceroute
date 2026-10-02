@@ -11,3 +11,15 @@ void print_help()
            "  --help\t\tRead this help and exit\n");
     exit(0);
 }
+
+/*
+ * Initialize the data for the probes to be sent
+ * Returns an array of t_probe of the number of probes to be sent out simultaneously
+ */
+t_probe *init_probe(t_cursor *probe_to_send)
+{
+    probe_to_send->ttl = START_TTL;
+    probe_to_send->probe_nb = 0;
+    probe_to_send->port = 0;
+    return ((t_probe *)calloc(sizeof(t_probe), (ul)QUERIES));
+}

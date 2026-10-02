@@ -29,10 +29,12 @@
 #define QUERIES 16
 #define PORT "33434"
 
+typedef unsigned long ul;
+
 typedef struct s_send_packet
 {
     int sockfd;
-    struct sockaddr addr_in;
+    struct sockaddr_in *addr_in;
     size_t addr_in_len;
 } t_send_packet;
 
@@ -40,15 +42,16 @@ typedef struct s_probe
 {
     int ttl;
     int port;
-    int query_nb;
+    int probe_nb;
     bool in_use;
-    struct timeval send_time;
+    struct timespec send_time;
 } t_probe;
 
 typedef struct s_cursor
 {
-    int next_query;
-    int next_ttl;
+    int ttl;
+    int probe_nb;
+    int port;
 } t_cursor;
 
 typedef struct s_query_result
@@ -82,7 +85,7 @@ void ft_create_receive_socket(struct pollfd *receive_packet);
 /*==========    PACKET    ========*/
 /*================================*/
 
-// void ft_send_packet(t_packet *send_packet, t_probe *probe, int ttl);
+void ft_send_packet(t_send_packet *send_packet, t_probe *probes, t_cursor *probe_to_send);
 // void ft_receive_packet(t_packet *receive_packet, t_probe *probes, struct pollfd *poll_fd);
 
 /*================================*/
@@ -90,3 +93,4 @@ void ft_create_receive_socket(struct pollfd *receive_packet);
 /*================================*/
 
 void print_help();
+t_probe *init_probe(t_cursor *probe_to_send);

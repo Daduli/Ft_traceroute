@@ -18,7 +18,7 @@ void ft_create_send_socket(t_send_packet *send_packet, char *hostname)
         exit(1);
     }
 
-    send_packet->addr_in = *result->ai_addr;
+    send_packet->addr_in = (struct sockaddr_in *)result->ai_addr;
     send_packet->addr_in_len = result->ai_addrlen;
 
     send_packet->sockfd = socket(PF_INET, result->ai_socktype, result->ai_protocol);

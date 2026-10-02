@@ -1,29 +1,65 @@
-// #include "../ft_traceroute.h"
+#include "../ft_traceroute.h"
 
-// /*
-//  * Sends a packet with a specified TTL value to the target host
-//  */
-// void ft_send_packet(t_packet *send_packet, t_probe *probe, int ttl)
-// {
-//     // Change this to a 60 bytes message
-//     char *message = "message";
+/*
+ * Move the cursor to the next probe to be sent in the queries list
+ */
+void ft_advance_cursor(t_cursor *probe_to_send)
+{
+    probe_to_send->probe_nb++;
+    if (probe_to_send->probe_nb == 3)
+    {
+        probe_to_send->probe_nb = 0;
+        probe_to_send->ttl++;
+    }
+}
 
-//     if (setsockopt(send_packet->sockfd, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl)) == -1)
-//     {
-//         printf("ft_traceroute: send setsockopt failed\n");
-//         close(send_packet->sockfd);
-//         exit(1);
-//     }
+/*
+ * Sends a packet with a specified TTL and port value to the target host
+ */
+void ft_send_probe(t_send_packet *send_packet, t_probe *probe, t_cursor probe_to_send)
+{
+    // Change this to a 60 bytes message
+    char *message = "message";
+    int port = atoi(PORT) + probe_to_send.port++;
 
-//     clock_gettime(CLOCK_MONOTONIC, &probe->start_time);
+    if (setsockopt(send_packet->sockfd, IPPROTO_IP, IP_TTL, &probe_to_send.ttl, sizeof(probe_to_send.ttl)) == -1)
+    {
+        printf("ft_traceroute: send setsockopt failed\n");
+        close(send_packet->sockfd);
+        exit(1);
+    }
+    send_packet->addr_in->sin_port = htons(port);
 
-//     if (sendto(send_packet->sockfd, message, sizeof(message), 0, &send_packet->address_infos, send_packet->address_infos_len) == -1)
-//     {
-//         printf("ft_traceroute: sendto failed: %s\n", strerror(errno));
-//         close(send_packet->sockfd);
-//         exit(1);
-//     }
-// }
+    if (sendto(send_packet->sockfd, message, sizeof(message), 0, (struct sockaddr *)send_packet->addr_in, send_packet->addr_in_len) == -1)
+    {
+        printf("ft_traceroute: sendto failed: %s\n", strerror(errno));
+        close(send_packet->sockfd);
+        exit(1);
+    }
+
+    clock_gettime(CLOCK_MONOTONIC, &probe->send_time);
+    probe->in_use = true;
+    probe->ttl = probe_to_send.ttl;
+    probe->probe_nb = probe_to_send.probe_nb;
+    probe->port = port;
+}
+
+/*
+ * Sends QUERIES probes simultaneously
+ */
+void ft_send_packet(t_send_packet *send_packet, t_probe *probes, t_cursor *probe_to_send)
+{
+    for (int i = 0; i < QUERIES; i++)
+    {
+        if (probe_to_send->ttl > MAX_TTL)
+            return;
+        if (!probes[i].in_use)
+        {
+            ft_send_probe(send_packet, &probes[i], *probe_to_send);
+            ft_advance_cursor(probe_to_send);
+        }
+    }
+}
 
 // void ft_receive_packet(t_packet *receive_packet, t_probe *probes, struct pollfd *poll_fd)
 // {
