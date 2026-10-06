@@ -11,6 +11,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/ip_icmp.h>
+#include <netinet/udp.h>
 #include <errno.h>
 #include <sys/time.h>
 #include <string.h>
@@ -18,6 +19,7 @@
 #include <poll.h>
 #include <time.h>
 #include <stdbool.h>
+#include <math.h>
 
 /*================================*/
 /*=====    DATA STRUCTURE    =====*/
@@ -28,6 +30,7 @@
 #define START_TTL 1
 #define QUERIES 16
 #define PORT "33434"
+#define WAIT_TIME_MS 5000
 
 typedef unsigned long ul;
 
@@ -86,7 +89,7 @@ void ft_create_receive_socket(struct pollfd *receive_packet);
 /*================================*/
 
 void ft_send_packet(t_send_packet *send_packet, t_probe *probes, t_cursor *probe_to_send);
-// void ft_receive_packet(t_packet *receive_packet, t_probe *probes, struct pollfd *poll_fd);
+void ft_receive_packet(struct pollfd *receive_packet, t_probe *probes);
 
 /*================================*/
 /*=========    HELPERS    ========*/
@@ -94,3 +97,4 @@ void ft_send_packet(t_send_packet *send_packet, t_probe *probes, t_cursor *probe
 
 void print_help();
 t_probe *init_probe(t_cursor *probe_to_send);
+float compute_timeout(t_probe *probes);

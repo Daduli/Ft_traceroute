@@ -5,9 +5,11 @@ int main(int ac, char **av)
     char *hostname;
     char dest_ip[INET_ADDRSTRLEN];
     t_send_packet send_packet;
-    struct pollfd receive_packet;
+    struct pollfd receive_packet[1];
     t_probe *probes;
     t_cursor probe_to_send;
+    int num_events;
+    float timeout;
 
     // Program needs to be run as root to receive raw packets
     if (getuid())
@@ -19,7 +21,7 @@ int main(int ac, char **av)
 
     // Create the sending and receiving sockets
     ft_create_send_socket(&send_packet, hostname);
-    ft_create_receive_socket(&receive_packet);
+    ft_create_receive_socket(&receive_packet[0]);
 
     // Save the IP address of the host
     inet_ntop(AF_INET, &send_packet.addr_in->sin_addr, dest_ip, sizeof(dest_ip));
@@ -34,7 +36,20 @@ int main(int ac, char **av)
     // for (int i = 0; i < QUERIES; i++)
     //     printf("Probe[%d] TTL: %d\nPort: %d\nNb: %d\nIn use: %d\n", i, probes[i].ttl, probes[i].port, probes[i].probe_nb, probes[i].in_use);
 
+    // while (probe_to_send.ttl < MAX_TTL)
+    // {
+    // printf("Loop\n");
     ft_send_packet(&send_packet, probes, &probe_to_send);
+    // printf("Timeout for poll: %f\n", compute_timeout(probes));
+    timeout = compute_timeout(probes);
+    // printf("Poll timeout value: %f\n", timeout);
+    num_events = poll(receive_packet, 1, (int)timeout);
+    if (num_events)
+        ft_receive_packet(&receive_packet[0], probes);
+    else
+        printf("One packet timed out\n");
+    // ft_handle_timeout();
+    // }
 
     //--------------
 

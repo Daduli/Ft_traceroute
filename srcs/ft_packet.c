@@ -61,6 +61,17 @@ void ft_send_packet(t_send_packet *send_packet, t_probe *probes, t_cursor *probe
     }
 }
 
+void ft_receive_packet(struct pollfd *receive_packet, t_probe *probes)
+{
+    char buffer[1024];
+    char src_ip[INET_ADDRSTRLEN];
+    struct sockaddr *addr;
+    socklen_t *addr_len;
+
+    recvfrom(receive_packet->fd, buffer, sizeof(buffer), 0, addr, addr_len);
+    printf("Packet received!\n");
+}
+
 // void ft_receive_packet(t_packet *receive_packet, t_probe *probes, struct pollfd *poll_fd)
 // {
 //     int num_events = poll(poll_fd, QUERIES, 5000);
