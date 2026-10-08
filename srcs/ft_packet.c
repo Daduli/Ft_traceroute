@@ -10,19 +10,21 @@ void ft_advance_cursor(t_cursor *probe_to_send)
     {
         probe_to_send->probe_nb = 0;
         probe_to_send->ttl++;
+        probe_to_send->port++;
     }
 }
 
 /*
  * Sends a packet with a specified TTL and port value to the target host
  */
-void ft_send_probe(t_send_packet *send_packet, t_probe *probe, t_cursor probe_to_send)
+void ft_send_probe(t_send_packet *send_packet, t_probe *probe, t_cursor *probe_to_send)
 {
     // Change this to a 60 bytes message
     char *message = "message";
-    int port = atoi(PORT) + probe_to_send.port++;
+    int port = atoi(PORT) + probe_to_send->port;
+    // printf("Sending packet with port: %d\n", port);
 
-    if (setsockopt(send_packet->sockfd, IPPROTO_IP, IP_TTL, &probe_to_send.ttl, sizeof(probe_to_send.ttl)) == -1)
+    if (setsockopt(send_packet->sockfd, IPPROTO_IP, IP_TTL, &probe_to_send->ttl, sizeof(probe_to_send->ttl)) == -1)
     {
         printf("ft_traceroute: send setsockopt failed\n");
         close(send_packet->sockfd);
@@ -39,8 +41,8 @@ void ft_send_probe(t_send_packet *send_packet, t_probe *probe, t_cursor probe_to
 
     clock_gettime(CLOCK_MONOTONIC, &probe->send_time);
     probe->in_use = true;
-    probe->ttl = probe_to_send.ttl;
-    probe->probe_nb = probe_to_send.probe_nb;
+    probe->ttl = probe_to_send->ttl;
+    probe->probe_nb = probe_to_send->probe_nb;
     probe->port = port;
 }
 
@@ -55,10 +57,50 @@ void ft_send_packet(t_send_packet *send_packet, t_probe *probes, t_cursor *probe
             return;
         if (!probes[i].in_use)
         {
-            ft_send_probe(send_packet, &probes[i], *probe_to_send);
+            ft_send_probe(send_packet, &probes[i], probe_to_send);
             ft_advance_cursor(probe_to_send);
         }
     }
+}
+
+/*
+ * Parse the packet outer IP and ICMP header then the inner IP and ICMP header if the ICMP type is TIME_EXCEEDED or ICMP_UNREACH
+ * And  set the argument *port* from the port in the UDP header
+ *
+ * Returns 1 on success and 0 if the packet doesn't correspond to the mentinoned types
+ */
+int ft_parse_packet(char *buffer, uint16_t *port)
+{
+    struct ip *outer_ip = (struct ip *)buffer;
+    int outer_ip_len = outer_ip->ip_hl * 4;
+
+    struct icmp *outer_icmp = (struct icmp *)(buffer + outer_ip_len);
+
+    if (outer_icmp->icmp_type == ICMP_TIME_EXCEEDED || outer_icmp->icmp_type == ICMP_UNREACH)
+    {
+        struct ip *orig_ip = (struct ip *)(buffer + outer_ip_len + 8); // 8 for ICMP header size (might change with #define)
+        int orig_ip_len = orig_ip->ip_hl * 4;
+        struct udphdr *orig_udp = (struct udphdr *)((char *)orig_ip + orig_ip_len); // UDP header follows IP header
+
+        *port = ntohs(orig_udp->uh_dport);
+        return (1);
+    }
+    return (0);
+}
+
+/*
+ * Scan through the probes table to find if there is one that matches the port given
+ *
+ * Returns the index of the probes that matched, else return -1
+ */
+int ft_find_probe(t_probe *probes, uint16_t port)
+{
+    int i = -1;
+
+    while (++i < QUERIES)
+        if (probes[i].in_use && probes[i].port == port)
+            return (i);
+    return (-1);
 }
 
 void ft_receive_packet(struct pollfd *receive_packet, t_probe *probes)
@@ -67,9 +109,30 @@ void ft_receive_packet(struct pollfd *receive_packet, t_probe *probes)
     char src_ip[INET_ADDRSTRLEN];
     struct sockaddr *addr;
     socklen_t *addr_len;
+    uint16_t port;
+    int probe_index;
 
     recvfrom(receive_packet->fd, buffer, sizeof(buffer), 0, addr, addr_len);
-    printf("Packet received!\n");
+
+    // Parse the packet, get outer IP and ICMP header then innner IP and ICMP header
+    // Check if it's the correct ICMP type  and code (UNREACH || TIME_EXC)
+    // Retrieve the original port that the packet was sent on
+    if (!ft_parse_packet(buffer, &port))
+        return;
+
+    // printf("Port from packet received: %d\n", port);
+
+    // Find in the probe table the one that have the same port
+    probe_index = ft_find_probe(probes, port);
+    // If not found, means that it's a packet we've already treated - return
+    if (probe_index == -1)
+        return;
+
+    // Compute RTT, and save it in struct to print later
+    // Stops if ICMP type = UNREACH???
+
+    // Set the probe.in_use to false
+    probes[probe_index].in_use = false;
 }
 
 // void ft_receive_packet(t_packet *receive_packet, t_probe *probes, struct pollfd *poll_fd)

@@ -53,5 +53,5 @@ float compute_timeout(t_probe *probes)
     now_ms = now.tv_sec * 1000 + now.tv_nsec / 1000000;
     // printf("Now in ms: %f\n", now_ms);
 
-    return ((earliest_deadline - now_ms ? earliest_deadline - now_ms : 0));
+    return ((earliest_deadline - now_ms > 0 ? earliest_deadline - now_ms : 0));
 }

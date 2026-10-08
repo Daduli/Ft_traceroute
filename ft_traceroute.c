@@ -51,6 +51,9 @@ int main(int ac, char **av)
     // ft_handle_timeout();
     // }
 
+    // for (int i = 0; i < QUERIES; i++)
+    //     printf("Probe[%d] TTL: %d\nPort: %d\nNb: %d\nIn use: %d\n", i, probes[i].ttl, probes[i].port, probes[i].probe_nb, probes[i].in_use);
+
     //--------------
 
     // for (int ttl = 1; ttl <= MAX_TTL; ttl++)
