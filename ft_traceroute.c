@@ -10,6 +10,7 @@ int main(int ac, char **av)
     t_cursor probe_to_send;
     int num_events;
     float timeout;
+    t_hop_result results[MAX_TTL - START_TTL];
 
     // Program needs to be run as root to receive raw packets
     if (getuid())

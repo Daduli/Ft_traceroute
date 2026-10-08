@@ -57,17 +57,18 @@ typedef struct s_cursor
     int port;
 } t_cursor;
 
-typedef struct s_query_result
+typedef struct s_probe_result
 {
     bool replied;
-    char ip[INET_ADDRSTRLEN];
-    char *hostname;
-    int rtt;
-} t_query_result;
+    float rtt;
+} t_probe_result;
 
 typedef struct s_hop_result
 {
-    t_query_result res[3];
+    t_probe_result res[3];
+    int ttl;
+    char *hostname;
+    char ip[INET_ADDRSTRLEN];
     int replies;
 } t_hop_result;
 

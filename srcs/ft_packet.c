@@ -114,7 +114,7 @@ void ft_receive_packet(struct pollfd *receive_packet, t_probe *probes)
 
     recvfrom(receive_packet->fd, buffer, sizeof(buffer), 0, addr, addr_len);
 
-    // Parse the packet, get outer IP and ICMP header then innner IP and ICMP header
+    // Parse the packet, get outer IP and ICMP header then inner IP and ICMP header
     // Check if it's the correct ICMP type  and code (UNREACH || TIME_EXC)
     // Retrieve the original port that the packet was sent on
     if (!ft_parse_packet(buffer, &port))
@@ -129,6 +129,7 @@ void ft_receive_packet(struct pollfd *receive_packet, t_probe *probes)
         return;
 
     // Compute RTT, and save it in struct to print later
+
     // Stops if ICMP type = UNREACH???
 
     // Set the probe.in_use to false
