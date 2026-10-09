@@ -6,7 +6,7 @@
 // Initial record array need to be initialized
 // One function for probe res and one for hop res
 // Needs a way to know which hop to print in the correct order
-void ft_record_result(t_probe *probe, bool replied)
+void ft_record_result(t_hop_result *results, t_probe *probe, bool replied)
 {
     // Call this for resolved
     // If the table is not init, do the init

@@ -107,12 +107,13 @@ void ft_receive_packet(struct pollfd *receive_packet, t_probe *probes)
 {
     char buffer[1024];
     char src_ip[INET_ADDRSTRLEN];
-    struct sockaddr *addr;
-    socklen_t *addr_len;
+    char sender_hostname[256];
+    struct sockaddr addr;
+    socklen_t addr_len = sizeof(addr);
     uint16_t port;
     int probe_index;
 
-    recvfrom(receive_packet->fd, buffer, sizeof(buffer), 0, addr, addr_len);
+    recvfrom(receive_packet->fd, buffer, sizeof(buffer), 0, &addr, &addr_len);
 
     // Parse the packet, get outer IP and ICMP header then inner IP and ICMP header
     // Check if it's the correct ICMP type  and code (UNREACH || TIME_EXC)
@@ -127,6 +128,17 @@ void ft_receive_packet(struct pollfd *receive_packet, t_probe *probes)
     // If not found, means that it's a packet we've already treated - return
     if (probe_index == -1)
         return;
+
+    // printf("Probe number %d received, data:\nTTL: %d\nPort: %d\n", probe_index, probes[probe_index].ttl, probes[probe_index].port);
+
+    // Get the sender's IP address
+    struct sockaddr_in *addr_in = (struct sockaddr_in *)&addr;
+    inet_ntop(AF_INET, &addr_in->sin_addr, src_ip, INET_ADDRSTRLEN);
+    printf("Sender IP: %s\n", src_ip);
+
+    // Get the sender's hostname
+    getnameinfo((struct sockaddr *)addr_in, addr_len, sender_hostname, 256, NULL, 0, 0);
+    printf("Hostname : %s\n", sender_hostname);
 
     // Compute RTT, and save it in struct to print later
 

@@ -61,15 +61,16 @@ typedef struct s_probe_result
 {
     bool replied;
     float rtt;
+    char ip[INET_ADDRSTRLEN];
+    char *hostname;
 } t_probe_result;
 
 typedef struct s_hop_result
 {
-    t_probe_result res[3];
     int ttl;
-    char *hostname;
-    char ip[INET_ADDRSTRLEN];
     int replies;
+    bool printable;
+    t_probe_result res[3];
 } t_hop_result;
 
 /*================================*/
