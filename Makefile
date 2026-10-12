@@ -5,6 +5,7 @@ SRCS += ft_traceroute.c \
 		srcs/ft_socket.c \
 		srcs/ft_packet.c \
 		srcs/ft_helpers.c \
+		srcs/ft_result.c \
 
 OBJS = $(SRCS:.c=.o)
 

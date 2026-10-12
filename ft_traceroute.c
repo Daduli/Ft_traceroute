@@ -10,7 +10,8 @@ int main(int ac, char **av)
     t_cursor probe_to_send;
     int num_events;
     float timeout;
-    // t_hop_result results[MAX_TTL - START_TTL];
+    t_hop_result results[30];
+    int next_print = 0;
 
     // Program needs to be run as root to receive raw packets
     if (getuid())
@@ -31,26 +32,31 @@ int main(int ac, char **av)
     printf("traceroute to %s (%s), %d hops max, %d byte packets\n", hostname, dest_ip, MAX_TTL, (int)strlen("message"));
 
     probes = init_probe(&probe_to_send);
+    ft_init_results(results);
+
+    // for (int i = 0; i < MAX_TTL; i++)
+    //     printf("Results data, printable: %s - TTL: %d - Nb replied: %d\n", results[i].printable ? "true" : "false", results[i].ttl, results[i].replies);
 
     // printf("Probe to send TTL: %d\n Nb: %d\n", probe_to_send.ttl, probe_to_send.probe_nb);
 
     // for (int i = 0; i < QUERIES; i++)
     //     printf("Probe[%d] TTL: %d\nPort: %d\nNb: %d\nIn use: %d\n", i, probes[i].ttl, probes[i].port, probes[i].probe_nb, probes[i].in_use);
 
-    // while (probe_to_send.ttl < MAX_TTL)
-    // {
-    // printf("Loop\n");
-    ft_send_packet(&send_packet, probes, &probe_to_send);
-    // printf("Timeout for poll: %f\n", compute_timeout(probes));
-    timeout = compute_timeout(probes);
-    // printf("Poll timeout value: %f\n", timeout);
-    num_events = poll(receive_packet, 1, (int)timeout);
-    if (num_events)
-        ft_receive_packet(&receive_packet[0], probes);
-    else
-        printf("One packet timed out\n");
-    // ft_handle_timeout();
-    // }
+    while (next_print < 30) // Change condition to until probes is empty
+    {
+        ft_send_packet(&send_packet, probes, &probe_to_send); // If variable to send is true -> send
+        // printf("Loop\n");
+        // printf("Timeout for poll: %f\n", compute_timeout(probes));
+        timeout = compute_timeout(probes);
+        // printf("Poll timeout value: %f\n", timeout);
+        num_events = poll(receive_packet, 1, (int)timeout);
+        // printf("Num events: %d\n", num_events);
+        if (num_events)
+            ft_receive_packet(&receive_packet[0], probes, results, &next_print);
+        else // Do something to not enter this function while waiting
+            ft_expired_packet(results, probes, &next_print);
+        // ft_handle_timeout();
+    }
 
     // for (int i = 0; i < QUERIES; i++)
     //     printf("Probe[%d] TTL: %d\nPort: %d\nNb: %d\nIn use: %d\n", i, probes[i].ttl, probes[i].port, probes[i].probe_nb, probes[i].in_use);

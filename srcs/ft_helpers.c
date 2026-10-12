@@ -38,8 +38,9 @@ float compute_timeout(t_probe *probes)
     {
         if (probes[i].in_use)
         {
+            // printf("Computing deadline for probe with TTL: %d\n", probes[i].ttl);
             deadline_ms = probes[i].send_time.tv_sec * 1000 + probes[i].send_time.tv_nsec / 1000000 + WAIT_TIME_MS;
-            // printf("Deadline for probe[%d]: %f\n", i, deadline_ms);
+            // printf("Deadline for probe[%d]: %f\n", i, deadline_ms - now_ms);
             if (deadline_ms < earliest_deadline)
                 earliest_deadline = deadline_ms;
         }
@@ -52,6 +53,7 @@ float compute_timeout(t_probe *probes)
     clock_gettime(CLOCK_MONOTONIC, &now);
     now_ms = now.tv_sec * 1000 + now.tv_nsec / 1000000;
     // printf("Now in ms: %f\n", now_ms);
+    // printf("Returned deadline: %f\n", earliest_deadline - now_ms);
 
     return ((earliest_deadline - now_ms > 0 ? earliest_deadline - now_ms : 0));
 }

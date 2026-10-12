@@ -6,7 +6,7 @@
 void ft_advance_cursor(t_cursor *probe_to_send)
 {
     probe_to_send->probe_nb++;
-    if (probe_to_send->probe_nb == 3)
+    if (probe_to_send->probe_nb == PROBE_PER_HOP)
     {
         probe_to_send->probe_nb = 0;
         probe_to_send->ttl++;
@@ -57,6 +57,7 @@ void ft_send_packet(t_send_packet *send_packet, t_probe *probes, t_cursor *probe
             return;
         if (!probes[i].in_use)
         {
+            // printf("Index %d is not in use\n", i);
             ft_send_probe(send_packet, &probes[i], probe_to_send);
             ft_advance_cursor(probe_to_send);
         }
@@ -103,7 +104,7 @@ int ft_find_probe(t_probe *probes, uint16_t port)
     return (-1);
 }
 
-void ft_receive_packet(struct pollfd *receive_packet, t_probe *probes)
+void ft_receive_packet(struct pollfd *receive_packet, t_probe *probes, t_hop_result *results, int *next_print)
 {
     char buffer[1024];
     char src_ip[INET_ADDRSTRLEN];
@@ -112,6 +113,7 @@ void ft_receive_packet(struct pollfd *receive_packet, t_probe *probes)
     socklen_t addr_len = sizeof(addr);
     uint16_t port;
     int probe_index;
+    struct timespec end_time;
 
     recvfrom(receive_packet->fd, buffer, sizeof(buffer), 0, &addr, &addr_len);
 
@@ -131,21 +133,54 @@ void ft_receive_packet(struct pollfd *receive_packet, t_probe *probes)
 
     // printf("Probe number %d received, data:\nTTL: %d\nPort: %d\n", probe_index, probes[probe_index].ttl, probes[probe_index].port);
 
+    // Compute RTT, and save it in struct to print later
+    clock_gettime(CLOCK_MONOTONIC, &end_time);
+    end_time.tv_sec -= probes[probe_index].send_time.tv_sec;
+    end_time.tv_nsec -= probes[probe_index].send_time.tv_nsec;
+    float time_ms = (float)end_time.tv_sec * 1000 + (float)end_time.tv_nsec / 1000000;
+
+    // Record results for printing
+    ft_record_result(results, &probes[probe_index], (struct sockaddr_in *)&addr, time_ms, true, next_print);
+
+    // printf("Packet with TTL %d received RTT: %.3f\n", probes[probe_index].ttl, time_ms);
+
     // Get the sender's IP address
-    struct sockaddr_in *addr_in = (struct sockaddr_in *)&addr;
-    inet_ntop(AF_INET, &addr_in->sin_addr, src_ip, INET_ADDRSTRLEN);
-    printf("Sender IP: %s\n", src_ip);
+    // struct sockaddr_in *addr_in = (struct sockaddr_in *)&addr;
+    // inet_ntop(AF_INET, &addr_in->sin_addr, src_ip, INET_ADDRSTRLEN);
+    // printf("Sender IP: %s\n", src_ip);
 
     // Get the sender's hostname
-    getnameinfo((struct sockaddr *)addr_in, addr_len, sender_hostname, 256, NULL, 0, 0);
-    printf("Hostname : %s\n", sender_hostname);
-
-    // Compute RTT, and save it in struct to print later
+    // getnameinfo((struct sockaddr *)addr_in, addr_len, sender_hostname, 256, NULL, 0, 0);
+    // printf("Hostname : %s\n", sender_hostname);
 
     // Stops if ICMP type = UNREACH???
 
     // Set the probe.in_use to false
     probes[probe_index].in_use = false;
+}
+
+void ft_expired_packet(t_hop_result *results, t_probe *probes, int *next_print)
+{
+    printf("EXPIRED\n");
+    struct timespec now;
+    float deadline = INFINITY;
+
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    float now_ms = now.tv_sec * 1000 + now.tv_nsec / 1000000;
+
+    for (int i = 0; i < QUERIES; i++)
+    {
+        if (probes[i].in_use)
+            deadline = probes[i].send_time.tv_sec * 1000 + probes[i].send_time.tv_nsec / 1000000 + WAIT_TIME_MS;
+        if (now_ms > deadline)
+        {
+            printf("Probe with TTL %d expired, index is %d\n", probes[i].ttl, i);
+            // printf("In use value: %s\n", probes[i].in_use ? "true" : "false");
+            // Record probe for result
+            probes[i].in_use = false;
+            ft_record_result(results, &probes[i], NULL, 0.0f, false, next_print);
+        }
+    }
 }
 
 // void ft_receive_packet(t_packet *receive_packet, t_probe *probes, struct pollfd *poll_fd)
