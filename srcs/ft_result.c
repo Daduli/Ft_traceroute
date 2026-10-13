@@ -14,24 +14,31 @@ void ft_print_result(t_hop_result *results, int *next_print)
 {
     while (results[*next_print].printable && *next_print < MAX_TTL)
     {
-        printf("Hop nb %d is printable\n", results[*next_print].ttl);
+        char src_ip[INET_ADDRSTRLEN];
+        printf("%d  ", results[*next_print].ttl);
+        for (int i = 0; i < PROBE_PER_HOP; i++)
+        {
+            if (results[*next_print].res[i].replied)
+            {
+                inet_ntop(AF_INET, &results[*next_print].res[i].addr_in->sin_addr, src_ip, INET_ADDRSTRLEN);
+                printf("%s %.3f ms ", src_ip, results[*next_print].res[i].rtt);
+
+                // Get the sender's hostname
+                // getnameinfo((struct sockaddr *)addr_in, addr_len, sender_hostname, 256, NULL, 0, 0);
+                // printf("Hostname : %s\n", sender_hostname);
+            }
+            else
+            {
+                printf(" * ");
+            }
+        }
+        printf("\n");
         (*next_print)++;
     }
 }
 
-// Takes the one probe that has resolved (reply or timeout) 3 times
-// Takes the ip and hostname of the sender
-// Set a TTl to the table in the array
-// Initial record array need to be initialized
-// One function for probe res and one for hop res
-// Needs a way to know which hop to print in the correct order
 void ft_record_result(t_hop_result *results, t_probe *probe, struct sockaddr_in *addr_in, float rtt, bool replied, int *next_print)
 {
-    // Call this for resolved
-    // If the table is not init, do the init
-    // Else skip to the RTT saving
-    // printf("Recording result, TTL: %d - Probe nb: %d\n", results[probe->ttl - 1].ttl, probe->probe_nb);
-
     if (replied)
     {
         results[probe->ttl - 1].res[probe->probe_nb].rtt = rtt;
@@ -44,5 +51,5 @@ void ft_record_result(t_hop_result *results, t_probe *probe, struct sockaddr_in 
     {
         results[probe->ttl - 1].printable = true;
         ft_print_result(results, next_print);
-    } // Print line
+    }
 }

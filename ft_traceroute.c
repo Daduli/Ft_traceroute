@@ -1,5 +1,8 @@
 #include "ft_traceroute.h"
 
+volatile bool reached = false;
+volatile int final_ttl = MAX_TTL;
+
 int main(int ac, char **av)
 {
     char *hostname;
@@ -34,53 +37,15 @@ int main(int ac, char **av)
     probes = init_probe(&probe_to_send);
     ft_init_results(results);
 
-    // for (int i = 0; i < MAX_TTL; i++)
-    //     printf("Results data, printable: %s - TTL: %d - Nb replied: %d\n", results[i].printable ? "true" : "false", results[i].ttl, results[i].replies);
-
-    // printf("Probe to send TTL: %d\n Nb: %d\n", probe_to_send.ttl, probe_to_send.probe_nb);
-
-    // for (int i = 0; i < QUERIES; i++)
-    //     printf("Probe[%d] TTL: %d\nPort: %d\nNb: %d\nIn use: %d\n", i, probes[i].ttl, probes[i].port, probes[i].probe_nb, probes[i].in_use);
-
-    while (next_print < 30) // Change condition to until probes is empty
+    while (next_print < final_ttl || !reached) // Change condition to until probes is empty
     {
-        ft_send_packet(&send_packet, probes, &probe_to_send); // If variable to send is true -> send
-        // printf("Loop\n");
-        // printf("Timeout for poll: %f\n", compute_timeout(probes));
+        if (probe_to_send.ttl <= final_ttl)
+            ft_send_packet(&send_packet, probes, &probe_to_send);
         timeout = compute_timeout(probes);
-        // printf("Poll timeout value: %f\n", timeout);
         num_events = poll(receive_packet, 1, (int)timeout);
-        // printf("Num events: %d\n", num_events);
         if (num_events)
             ft_receive_packet(&receive_packet[0], probes, results, &next_print);
-        else // Do something to not enter this function while waiting
+        else
             ft_expired_packet(results, probes, &next_print);
-        // ft_handle_timeout();
     }
-
-    // for (int i = 0; i < QUERIES; i++)
-    //     printf("Probe[%d] TTL: %d\nPort: %d\nNb: %d\nIn use: %d\n", i, probes[i].ttl, probes[i].port, probes[i].probe_nb, probes[i].in_use);
-
-    //--------------
-
-    // for (int ttl = 1; ttl <= MAX_TTL; ttl++)
-    // {
-    //     for (int probe = 0; probe < NB_PROBES; probe++)
-    //     {
-    //         ft_send_packet(&send_packet, &probes[queries], ttl);
-    //         queries++;
-    //         // printf("Queries value: %d\n", queries);
-    //         if (queries == 16)
-    //             break;
-    //     }
-    //     if (queries == 16)
-    //     {
-    //         // printf("Exited probe loop\n");
-    //         queries = 0;
-    //         // for (int i = 0; i < QUERIES; i++)
-    //         // {
-    //         ft_receive_packet(&receive_packet, probes, poll_fd);
-    //         // }
-    //     }
-    // }
 }

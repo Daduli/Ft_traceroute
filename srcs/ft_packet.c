@@ -1,5 +1,8 @@
 #include "../ft_traceroute.h"
 
+extern bool reached;
+extern int final_ttl;
+
 /*
  * Move the cursor to the next probe to be sent in the queries list
  */
@@ -22,7 +25,6 @@ void ft_send_probe(t_send_packet *send_packet, t_probe *probe, t_cursor *probe_t
     // Change this to a 60 bytes message
     char *message = "message";
     int port = atoi(PORT) + probe_to_send->port;
-    // printf("Sending packet with port: %d\n", port);
 
     if (setsockopt(send_packet->sockfd, IPPROTO_IP, IP_TTL, &probe_to_send->ttl, sizeof(probe_to_send->ttl)) == -1)
     {
@@ -53,11 +55,8 @@ void ft_send_packet(t_send_packet *send_packet, t_probe *probes, t_cursor *probe
 {
     for (int i = 0; i < QUERIES; i++)
     {
-        if (probe_to_send->ttl > MAX_TTL)
-            return;
         if (!probes[i].in_use)
         {
-            // printf("Index %d is not in use\n", i);
             ft_send_probe(send_packet, &probes[i], probe_to_send);
             ft_advance_cursor(probe_to_send);
         }
@@ -84,7 +83,9 @@ int ft_parse_packet(char *buffer, uint16_t *port)
         struct udphdr *orig_udp = (struct udphdr *)((char *)orig_ip + orig_ip_len); // UDP header follows IP header
 
         *port = ntohs(orig_udp->uh_dport);
-        return (1);
+        if (outer_icmp->icmp_type == ICMP_TIME_EXCEEDED)
+            return (ICMP_TIME_EXCEEDED);
+        return (ICMP_UNREACH);
     }
     return (0);
 }
@@ -114,16 +115,12 @@ void ft_receive_packet(struct pollfd *receive_packet, t_probe *probes, t_hop_res
     uint16_t port;
     int probe_index;
     struct timespec end_time;
+    int icmp_resp;
 
     recvfrom(receive_packet->fd, buffer, sizeof(buffer), 0, &addr, &addr_len);
 
-    // Parse the packet, get outer IP and ICMP header then inner IP and ICMP header
-    // Check if it's the correct ICMP type  and code (UNREACH || TIME_EXC)
-    // Retrieve the original port that the packet was sent on
-    if (!ft_parse_packet(buffer, &port))
+    if (!(icmp_resp = ft_parse_packet(buffer, &port)))
         return;
-
-    // printf("Port from packet received: %d\n", port);
 
     // Find in the probe table the one that have the same port
     probe_index = ft_find_probe(probes, port);
@@ -131,7 +128,11 @@ void ft_receive_packet(struct pollfd *receive_packet, t_probe *probes, t_hop_res
     if (probe_index == -1)
         return;
 
-    // printf("Probe number %d received, data:\nTTL: %d\nPort: %d\n", probe_index, probes[probe_index].ttl, probes[probe_index].port);
+    if (icmp_resp == ICMP_UNREACH)
+    {
+        reached = true;
+        final_ttl = probes[probe_index].ttl;
+    }
 
     // Compute RTT, and save it in struct to print later
     clock_gettime(CLOCK_MONOTONIC, &end_time);
@@ -142,17 +143,6 @@ void ft_receive_packet(struct pollfd *receive_packet, t_probe *probes, t_hop_res
     // Record results for printing
     ft_record_result(results, &probes[probe_index], (struct sockaddr_in *)&addr, time_ms, true, next_print);
 
-    // printf("Packet with TTL %d received RTT: %.3f\n", probes[probe_index].ttl, time_ms);
-
-    // Get the sender's IP address
-    // struct sockaddr_in *addr_in = (struct sockaddr_in *)&addr;
-    // inet_ntop(AF_INET, &addr_in->sin_addr, src_ip, INET_ADDRSTRLEN);
-    // printf("Sender IP: %s\n", src_ip);
-
-    // Get the sender's hostname
-    // getnameinfo((struct sockaddr *)addr_in, addr_len, sender_hostname, 256, NULL, 0, 0);
-    // printf("Hostname : %s\n", sender_hostname);
-
     // Stops if ICMP type = UNREACH???
 
     // Set the probe.in_use to false
@@ -161,7 +151,6 @@ void ft_receive_packet(struct pollfd *receive_packet, t_probe *probes, t_hop_res
 
 void ft_expired_packet(t_hop_result *results, t_probe *probes, int *next_print)
 {
-    printf("EXPIRED\n");
     struct timespec now;
     float deadline = INFINITY;
 
@@ -170,114 +159,12 @@ void ft_expired_packet(t_hop_result *results, t_probe *probes, int *next_print)
 
     for (int i = 0; i < QUERIES; i++)
     {
-        if (probes[i].in_use)
-            deadline = probes[i].send_time.tv_sec * 1000 + probes[i].send_time.tv_nsec / 1000000 + WAIT_TIME_MS;
-        if (now_ms > deadline)
+        deadline = probes[i].send_time.tv_sec * 1000 + probes[i].send_time.tv_nsec / 1000000 + WAIT_TIME_MS;
+        if (now_ms > deadline && probes[i].in_use)
         {
-            printf("Probe with TTL %d expired, index is %d\n", probes[i].ttl, i);
-            // printf("In use value: %s\n", probes[i].in_use ? "true" : "false");
             // Record probe for result
-            probes[i].in_use = false;
             ft_record_result(results, &probes[i], NULL, 0.0f, false, next_print);
+            probes[i].in_use = false;
         }
     }
 }
-
-// void ft_receive_packet(t_packet *receive_packet, t_probe *probes, struct pollfd *poll_fd)
-// {
-//     int num_events = poll(poll_fd, QUERIES, 5000);
-//     char buffer[1024];
-
-//     // printf("ft_traceroute: Number of events: %d\n", num_events);
-
-//     if (num_events == 0)
-//     {
-//         printf("ft_traceroute: poll timeout\n");
-//         return;
-//     }
-//     else
-//     {
-//         for (int i = 0; i < QUERIES; i++)
-//         {
-//             // printf();
-//             if (poll_fd[i].revents & POLLIN)
-//             {
-//                 printf("Received response\n");
-//                 recvfrom(poll_fd[i].fd, buffer, sizeof(buffer), 0, &receive_packet->address_infos, (socklen_t *)&receive_packet->address_infos_len);
-
-//                 // Get the sender's IP address
-//                 char sender_ip[INET_ADDRSTRLEN];
-//                 inet_ntop(AF_INET, &receive_packet->address_infos, sender_ip, sizeof(sender_ip));
-
-//                 struct sockaddr_in *addr_in = (struct sockaddr_in *)&receive_packet->address_infos;
-//                 inet_ntop(AF_INET, &(addr_in->sin_addr), sender_ip, sizeof(sender_ip));
-//                 printf("Sender IP: %s\n", sender_ip);
-
-//                 // // Get the sender's hostname
-//                 // char sender_hostname[256];
-//                 // getnameinfo(receive_packet->address_infos->ai_addr, receive_packet->address_infos->ai_addrlen, sender_hostname, 256, NULL, 0, 0);
-//                 // printf("Hostname : %s\n", sender_hostname);
-//             }
-//             else
-//                 printf("No response\n");
-//         }
-//     }
-// }
-
-// /*
-//  * Receives an ICMP packet and returns a code indicating the type of response received:
-//  *
-//  * Code -1 = Receive Timeout
-//  * Code 0 = ICMP Time Exceeded
-//  * Code 1 = ICMP Port Unreachable
-//  */
-// // void ft_receive_packet(t_receive_packet *receive_packet)
-// // {
-// //     char buffer[1024];
-// //     struct timeval timeout;
-// //     timeout.tv_sec = 1;  // Set timeout to 5 seconds
-// //     timeout.tv_usec = 0; // It is mandatory to set usec
-
-// //     if (setsockopt(receive_packet->sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) == -1)
-// //     {
-// //         printf("ft_traceroute: receive setsockopt failed, %s\n", strerror(errno));
-// //         close(receive_packet->sockfd);
-// //         exit(1);
-// //     }
-
-// //     if (recvfrom(receive_packet->sockfd, buffer, sizeof(buffer), 0, receive_packet->address_infos->ai_addr, &receive_packet->address_infos->ai_addrlen) == -1)
-// //     {
-// //         if (errno == EAGAIN || errno == EWOULDBLOCK)
-// //         {
-// //             printf("*\n");
-// //         }
-// //         else
-// //         {
-// //             printf("ft_traceroute: recvfrom failed: %s\n", strerror(errno));
-// //             close(receive_packet->sockfd);
-// //             exit(1);
-// //         }
-// //     }
-
-// //     // Get the sender's IP address
-// //     char sender_ip[INET_ADDRSTRLEN];
-// //     inet_ntop(AF_INET, &((struct sockaddr_in *)receive_packet->address_infos->ai_addr)->sin_addr, sender_ip, sizeof(sender_ip));
-// //     printf("Sender IP: %s\n", sender_ip);
-
-// //     // Get the sender's hostname
-// //     char sender_hostname[256];
-// //     getnameinfo(receive_packet->address_infos->ai_addr, receive_packet->address_infos->ai_addrlen, sender_hostname, 256, NULL, 0, 0);
-// //     printf("Hostname : %s\n", sender_hostname);
-
-// //     // Set up the ICMP header and IP header pointers to detect the ICMP response type
-// //     struct iphdr *ip_header = (struct iphdr *)buffer;
-// //     struct icmphdr *icmp_header = (struct icmphdr *)(buffer + ip_header->ihl * 4);
-
-// //     if (icmp_header->type == ICMP_TIME_EXCEEDED && icmp_header->code == ICMP_EXC_TTL)
-// //         printf("TTL Exceeded\n");
-// //     else if (icmp_header->type == ICMP_DEST_UNREACH && icmp_header->code == ICMP_PORT_UNREACH)
-// //     {
-// //         printf("Host Reached\n");
-// //         exit(0);
-// //     }
-// // }
