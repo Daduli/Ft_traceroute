@@ -12,7 +12,7 @@ void ft_create_send_socket(t_send_packet *send_packet, char *hostname)
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_DGRAM; // Datagram socket to send an UDP packet
 
-    if (getaddrinfo(hostname, PORT, &hints, &result) != 0)
+    if (getaddrinfo(hostname, PORT_NB, &hints, &result) != 0)
     {
         printf("ft_traceroute: unknown host %s\n", hostname);
         exit(1);

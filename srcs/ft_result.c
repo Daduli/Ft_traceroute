@@ -12,15 +12,15 @@ void ft_init_results(t_hop_result *results)
 
 void ft_print_result(t_hop_result *results, int *next_print)
 {
+    char src_ip[INET_ADDRSTRLEN];
     while (results[*next_print].printable && *next_print < MAX_TTL)
     {
-        char src_ip[INET_ADDRSTRLEN];
-        printf("%d  ", results[*next_print].ttl);
+        printf("%d  ", *next_print + 1);
         for (int i = 0; i < PROBE_PER_HOP; i++)
         {
             if (results[*next_print].res[i].replied)
             {
-                inet_ntop(AF_INET, &results[*next_print].res[i].addr_in->sin_addr, src_ip, INET_ADDRSTRLEN);
+                inet_ntop(AF_INET, &(results[*next_print].res[i].addr_in->sin_addr), src_ip, sizeof(src_ip));
                 printf("%s %.3f ms ", src_ip, results[*next_print].res[i].rtt);
 
                 // Get the sender's hostname
@@ -29,7 +29,7 @@ void ft_print_result(t_hop_result *results, int *next_print)
             }
             else
             {
-                printf(" * ");
+                printf("* ");
             }
         }
         printf("\n");

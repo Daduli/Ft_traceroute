@@ -20,6 +20,7 @@
 #include <time.h>
 #include <stdbool.h>
 #include <math.h>
+#include <ctype.h>
 
 /*================================*/
 /*=====    DATA STRUCTURE    =====*/
@@ -29,11 +30,26 @@
 #define NB_PROBES 3
 #define START_TTL 1 // Drop from bonus
 #define QUERIES 16
-#define PORT "33434"
+#define PORT_NB "33434"
 #define WAIT_TIME_MS 5000
 #define PROBE_PER_HOP 3
 
-typedef unsigned long ul;
+#define HOSTNAME 'H'
+#define SINGLE_DASH 'S'
+#define DOUBLE_DASH 'D'
+
+#define PORT 'p'
+#define DNS_RESOLUTION 'n'
+#define PROBE_COUNT 'N'
+#define WAIT_TIME 'w'
+
+typedef struct s_flags
+{
+    uint16_t port;
+    bool dns_resolution;
+    int probe_count;
+    int max_wait;
+} t_flags;
 
 typedef struct s_send_packet
 {
@@ -77,7 +93,7 @@ typedef struct s_hop_result
 /*==========    PARSE    =========*/
 /*================================*/
 
-void ft_parser(int ac, char **av, char **hostname);
+void ft_parser(int ac, char **av, char **hostname, t_flags *flags);
 
 /*================================*/
 /*==========    SOCKET    ========*/

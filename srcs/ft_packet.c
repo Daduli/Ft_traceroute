@@ -24,7 +24,7 @@ void ft_send_probe(t_send_packet *send_packet, t_probe *probe, t_cursor *probe_t
 {
     // Change this to a 60 bytes message
     char *message = "message";
-    int port = atoi(PORT) + probe_to_send->port;
+    int port = atoi(PORT_NB) + probe_to_send->port;
 
     if (setsockopt(send_packet->sockfd, IPPROTO_IP, IP_TTL, &probe_to_send->ttl, sizeof(probe_to_send->ttl)) == -1)
     {

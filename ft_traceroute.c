@@ -15,6 +15,7 @@ int main(int ac, char **av)
     float timeout;
     t_hop_result results[30];
     int next_print = 0;
+    t_flags flags = {.dns_resolution = true, .max_wait = 5, .port = 33434, .probe_count = 16};
 
     // Program needs to be run as root to receive raw packets
     if (getuid())
@@ -22,7 +23,7 @@ int main(int ac, char **av)
         printf("Root permission needed\n");
         return (1);
     }
-    ft_parser(ac, av, &hostname);
+    ft_parser(ac, av, &hostname, &flags);
 
     // Create the sending and receiving sockets
     ft_create_send_socket(&send_packet, hostname);
