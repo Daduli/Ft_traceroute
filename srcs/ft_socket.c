@@ -3,16 +3,19 @@
 /*
  * Create a datagram socket for sending UDP packets
  */
-void ft_create_send_socket(t_send_packet *send_packet, char *hostname)
+void ft_create_send_socket(t_send_packet *send_packet, char *hostname, uint16_t port)
 {
     struct addrinfo hints;
     struct addrinfo *result;
+    char addr_port[5];
+
+    sprintf(addr_port, "%d", port);
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_DGRAM; // Datagram socket to send an UDP packet
 
-    if (getaddrinfo(hostname, PORT_NB, &hints, &result) != 0)
+    if (getaddrinfo(hostname, addr_port, &hints, &result) != 0)
     {
         printf("ft_traceroute: unknown host %s\n", hostname);
         exit(1);

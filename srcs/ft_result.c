@@ -5,6 +5,7 @@ void ft_init_results(t_hop_result *results)
     for (int i = 0; i < 30; i++)
     {
         results[i].ttl = i + 1;
+        results[i].rtt = INFINITY;
         results[i].replies = 0;
         results[i].printable = false;
     }
@@ -41,6 +42,10 @@ void ft_record_result(t_hop_result *results, t_probe *probe, struct sockaddr_in 
 {
     if (replied)
     {
+        if (results[probe->ttl - 1].rtt > rtt)
+        {
+            results[probe->ttl - 1].rtt = rtt;
+        }
         results[probe->ttl - 1].res[probe->probe_nb].rtt = rtt;
         results[probe->ttl - 1].res[probe->probe_nb].addr_in = addr_in;
     }
@@ -50,6 +55,7 @@ void ft_record_result(t_hop_result *results, t_probe *probe, struct sockaddr_in 
     if (results[probe->ttl - 1].replies == 3)
     {
         results[probe->ttl - 1].printable = true;
+        printf("Probe %d is printable\n", probe->ttl);
         ft_print_result(results, next_print);
     }
 }

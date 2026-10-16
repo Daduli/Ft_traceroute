@@ -26,7 +26,7 @@ int main(int ac, char **av)
     ft_parser(ac, av, &hostname, &flags);
 
     // Create the sending and receiving sockets
-    ft_create_send_socket(&send_packet, hostname);
+    ft_create_send_socket(&send_packet, hostname, flags.port);
     ft_create_receive_socket(&receive_packet[0]);
 
     // Save the IP address of the host
@@ -35,18 +35,19 @@ int main(int ac, char **av)
     // Change the %d value to a 60 byte packet
     printf("traceroute to %s (%s), %d hops max, %d byte packets\n", hostname, dest_ip, MAX_TTL, (int)strlen("message"));
 
-    probes = init_probe(&probe_to_send);
+    probes = init_probe(&probe_to_send, flags.probe_count);
     ft_init_results(results);
 
     while (next_print < final_ttl || !reached) // Change condition to until probes is empty
     {
         if (probe_to_send.ttl <= final_ttl)
-            ft_send_packet(&send_packet, probes, &probe_to_send);
-        timeout = compute_timeout(probes);
-        num_events = poll(receive_packet, 1, (int)timeout);
+            ft_send_packet(&send_packet, probes, &probe_to_send, flags);
+        // timeout = compute_timeout(probes, results, flags);
+        // printf("Timeout: %f\n", timeout);
+        num_events = poll(receive_packet, 1, 5);
         if (num_events)
-            ft_receive_packet(&receive_packet[0], probes, results, &next_print);
+            ft_receive_packet(&receive_packet[0], probes, results, &next_print, flags.probe_count);
         else
-            ft_expired_packet(results, probes, &next_print);
+            ft_expired_packet(results, probes, &next_print, flags.probe_count);
     }
 }

@@ -20,11 +20,11 @@ void ft_advance_cursor(t_cursor *probe_to_send)
 /*
  * Sends a packet with a specified TTL and port value to the target host
  */
-void ft_send_probe(t_send_packet *send_packet, t_probe *probe, t_cursor *probe_to_send)
+void ft_send_probe(t_send_packet *send_packet, t_probe *probe, t_cursor *probe_to_send, uint16_t base_port)
 {
     // Change this to a 60 bytes message
     char *message = "message";
-    int port = atoi(PORT_NB) + probe_to_send->port;
+    int port = base_port + probe_to_send->port;
 
     if (setsockopt(send_packet->sockfd, IPPROTO_IP, IP_TTL, &probe_to_send->ttl, sizeof(probe_to_send->ttl)) == -1)
     {
@@ -51,13 +51,13 @@ void ft_send_probe(t_send_packet *send_packet, t_probe *probe, t_cursor *probe_t
 /*
  * Sends QUERIES probes simultaneously
  */
-void ft_send_packet(t_send_packet *send_packet, t_probe *probes, t_cursor *probe_to_send)
+void ft_send_packet(t_send_packet *send_packet, t_probe *probes, t_cursor *probe_to_send, t_flags flags)
 {
-    for (int i = 0; i < QUERIES; i++)
+    for (int i = 0; i < flags.probe_count; i++)
     {
         if (!probes[i].in_use)
         {
-            ft_send_probe(send_packet, &probes[i], probe_to_send);
+            ft_send_probe(send_packet, &probes[i], probe_to_send, flags.port);
             ft_advance_cursor(probe_to_send);
         }
     }
@@ -95,17 +95,17 @@ int ft_parse_packet(char *buffer, uint16_t *port)
  *
  * Returns the index of the probes that matched, else return -1
  */
-int ft_find_probe(t_probe *probes, uint16_t port)
+int ft_find_probe(t_probe *probes, uint16_t port, int probe_count)
 {
     int i = -1;
 
-    while (++i < QUERIES)
+    while (++i < probe_count)
         if (probes[i].in_use && probes[i].port == port)
             return (i);
     return (-1);
 }
 
-void ft_receive_packet(struct pollfd *receive_packet, t_probe *probes, t_hop_result *results, int *next_print)
+void ft_receive_packet(struct pollfd *receive_packet, t_probe *probes, t_hop_result *results, int *next_print, int probe_count)
 {
     char buffer[1024];
     char src_ip[INET_ADDRSTRLEN];
@@ -123,7 +123,7 @@ void ft_receive_packet(struct pollfd *receive_packet, t_probe *probes, t_hop_res
         return;
 
     // Find in the probe table the one that have the same port
-    probe_index = ft_find_probe(probes, port);
+    probe_index = ft_find_probe(probes, port, probe_count);
     // If not found, means that it's a packet we've already treated - return
     if (probe_index == -1)
         return;
@@ -149,7 +149,7 @@ void ft_receive_packet(struct pollfd *receive_packet, t_probe *probes, t_hop_res
     probes[probe_index].in_use = false;
 }
 
-void ft_expired_packet(t_hop_result *results, t_probe *probes, int *next_print)
+void ft_expired_packet(t_hop_result *results, t_probe *probes, int *next_print, int probe_count)
 {
     struct timespec now;
     float deadline = INFINITY;
@@ -157,7 +157,7 @@ void ft_expired_packet(t_hop_result *results, t_probe *probes, int *next_print)
     clock_gettime(CLOCK_MONOTONIC, &now);
     float now_ms = now.tv_sec * 1000 + now.tv_nsec / 1000000;
 
-    for (int i = 0; i < QUERIES; i++)
+    for (int i = 0; i < probe_count; i++)
     {
         deadline = probes[i].send_time.tv_sec * 1000 + probes[i].send_time.tv_nsec / 1000000 + WAIT_TIME_MS;
         if (now_ms > deadline && probes[i].in_use)

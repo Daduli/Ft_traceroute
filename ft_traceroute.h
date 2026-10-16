@@ -30,7 +30,6 @@
 #define NB_PROBES 3
 #define START_TTL 1 // Drop from bonus
 #define QUERIES 16
-#define PORT_NB "33434"
 #define WAIT_TIME_MS 5000
 #define PROBE_PER_HOP 3
 
@@ -84,6 +83,7 @@ typedef struct s_probe_result
 typedef struct s_hop_result
 {
     int ttl;
+    float rtt; // Earliest RTT
     int replies;
     bool printable;
     t_probe_result res[3];
@@ -99,16 +99,16 @@ void ft_parser(int ac, char **av, char **hostname, t_flags *flags);
 /*==========    SOCKET    ========*/
 /*================================*/
 
-void ft_create_send_socket(t_send_packet *send_packet, char *hostname);
+void ft_create_send_socket(t_send_packet *send_packet, char *hostname, uint16_t port);
 void ft_create_receive_socket(struct pollfd *receive_packet);
 
 /*================================*/
 /*==========    PACKET    ========*/
 /*================================*/
 
-void ft_send_packet(t_send_packet *send_packet, t_probe *probes, t_cursor *probe_to_send);
-void ft_receive_packet(struct pollfd *receive_packet, t_probe *probes, t_hop_result *results, int *next_print);
-void ft_expired_packet(t_hop_result *results, t_probe *probes, int *next_print);
+void ft_send_packet(t_send_packet *send_packet, t_probe *probes, t_cursor *probe_to_send, t_flags flags);
+void ft_receive_packet(struct pollfd *receive_packet, t_probe *probes, t_hop_result *results, int *next_print, int probe_count);
+void ft_expired_packet(t_hop_result *results, t_probe *probes, int *next_print, int probe_count);
 
 /*================================*/
 /*=========    RESULTS    ========*/
@@ -122,5 +122,5 @@ void ft_record_result(t_hop_result *results, t_probe *probe, struct sockaddr_in 
 /*================================*/
 
 void print_help();
-t_probe *init_probe(t_cursor *probe_to_send);
-float compute_timeout(t_probe *probes);
+t_probe *init_probe(t_cursor *probe_to_send, size_t probe_nb);
+float compute_timeout(t_probe *probes, t_hop_result *results, t_flags flags);
